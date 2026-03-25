@@ -62,11 +62,11 @@ Abaixo estão os tempos de execução totais obtidos para o processamento integr
 
 | Nº Threads/Processos | Tempo de Execução (s) |
 | -------------------- | --------------------- |
-| 1                    | 115.9621              |
-| 2                    | 87.1972               |
-| 4                    | 44.6254               |
-| 8                    | 40.0523               |
-| 12                   | 37.5177               |
+| 1                    | 99.7823               |
+| 2                    | 49.5721               |
+| 4                    | 27.7637               |
+| 8                    | 14.3304               |
+| 12                   | 12.7076               |
 
 ---
 
@@ -101,11 +101,11 @@ Onde:
 
 | Threads/Processos | Tempo (s) | Speedup | Eficiência |
 | ----------------- | --------- | ------- | ---------- |
-| 1                 | 115.9621  | 1.00    | 1.00       |
-| 2                 | 87.1972   | 1.33    | 0.66       |
-| 4                 | 44.6254   | 2.60    | 0.65       |
-| 8                 | 40.0523   | 2.90    | 0.36       |
-| 12                | 37.5177   | 3.09    | 0.26       |
+| 1                 | 99.7823   | 1.00    | 1.00       |
+| 2                 | 49.5721   | 2.01    | 1.00       |
+| 4                 | 27.7637   | 3.59    | 0.89       |
+| 8                 | 14.3304   | 6.96    | 0.87       |
+| 12                | 12.7076   | 7.85    | 0.65       |
 
 ---
 
@@ -130,26 +130,19 @@ Onde:
 # 10. Análise dos Resultados
 
 **O speedup obtido foi próximo do ideal?**
-Não. Um speedup ideal seria linear (ex: 4 processos = speedup de 4.0). Obtivemos no máximo um speedup de 3.09x utilizando 12 processos.
+Sim, muito próximo do ideal até 8 processos. O speedup com 2 processos foi de 2.01x (perfeito), com 4 foi de 3.59x e com 8 processos atingiu quase 7x. 
 
 **A aplicação apresentou escalabilidade?**
-A aplicação escalou bem até 4 processos, onde o tempo caiu drasticamente de ~115s para ~44s. A partir de 4 processos, a curva de ganho de desempenho achatou, demonstrando retornos marginais.
+A aplicação apresentou uma escalabilidade excelente e praticamente linear do início até o marco de 8 processos, com reduções de tempo extremamente significativas em cada etapa.
 
 **Em qual ponto a eficiência começou a cair?**
-A eficiência sofreu uma leve queda inicial com 2 e 4 processos (mantendo-se na faixa de 0.65), mas despencou significativamente ao passar para 8 processos (0.36) e 12 processos (0.26).
+A eficiência manteve-se incrivelmente alta (acima de 87%) do 1º ao 8º processo. A queda de eficiência só ficou perceptível ao utilizar 12 processos, onde desceu para 0.65.
 
 **Houve overhead de paralelização?**
-Sim. Discutindo as causas:
-1. **Gargalo de I/O (Disco):** O problema exige a leitura de 1000 arquivos. Quando aumentamos para 8 ou 12 processos, todos tentam acessar o disco rígido simultaneamente, o que gera contenção de leitura. O disco físico não consegue entregar dados rápido o suficiente para alimentar a CPU.
-2. **Comunicação entre processos (IPC):** No Python, o `multiprocessing` precisa serializar (usando *pickle*) os dados de retorno de cada arquivo processado para enviá-los de volta ao processo principal. Esse tráfego de dicionários entre os processos gera um custo computacional considerável (overhead).
-3. **Limites Físicos:** O número de workers em 8 e 12 muito provavelmente satura ou ultrapassa o número de núcleos físicos reais disponíveis na máquina de teste, fazendo com que os processos comecem a disputar tempo de CPU.
-
----
+Houve pouquíssimo overhead até 8 processos. O overhead de comunicação Inter-Processos (IPC) e de leitura de disco só se tornou evidente ao tentar forçar a concorrência para 12 processos. Neste ponto (12), o ganho de tempo foi marginal (caiu apenas 1,6 segundos em relação a 8 processos), indicando que os processos começaram a competir por recursos físicos da máquina (concorrência de leitura no disco ou saturação de CPU).
 
 # 11. Conclusão
 
-O experimento demonstra que o paralelismo trouxe um ganho altamente significativo de desempenho, reduzindo o tempo de execução de quase 2 minutos (115s) para pouco mais de meio minuto (37s).
+O experimento demonstra que a paralelização trouxe um ganho de desempenho espetacular para esta aplicação, derrubando o tempo total de aproximadamente 1 minuto e 40 segundos (99.7s) para apenas 12 segundos.
 
-O **melhor número de processos (custo-benefício)** para este ambiente foi **4**, pois ofereceu uma excelente redução de tempo mantendo uma eficiência aceitável (65% de aproveitamento do recurso computacional alocado). O programa não escala linearmente em níveis altos de paralelismo devido ao intenso I/O de disco e ao overhead natural da linguagem Python na troca de mensagens entre processos de memória isolada.
-
-Uma possível melhoria na implementação seria o agrupamento de tarefas (*chunking*), enviando blocos de arquivos para cada processo ao invés de enviar um arquivo por vez, o que reduziria drasticamente o overhead de comunicação Inter-Processos (IPC).
+Para o ambiente testado, o número de processos ideal foi o de **8 processos**, pois entregou um tempo de execução extremamente baixo (14.3s) mantendo uma eficiência de quase 90% dos recursos computacionais. A aplicação escala de forma muito próxima à ideal, demonstrando que o algoritmo produtor-consumidor no Python soube isolar a carga corretamente.
